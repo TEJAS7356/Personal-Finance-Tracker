@@ -1,0 +1,4 @@
+finance.db
+__pycache__/
+.env
+.streamlit/secrets.toml
