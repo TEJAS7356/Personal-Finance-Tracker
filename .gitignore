@@ -1,4 +1,4 @@
-finance.db
+finance_tracker.db
 __pycache__/
 .env
 .streamlit/secrets.toml
