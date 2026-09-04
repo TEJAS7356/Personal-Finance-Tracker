@@ -10,6 +10,31 @@ A multi-page Streamlit app for tracking personal income and expenses, with budge
 - **Monthly Analytics** — income vs. expenses trend chart over time, month-over-month percentage comparison, and a monthly breakdown table.
 - **Savings Goals** — create savings goals with a target amount and date, and track progress with a visual bar.
 - **AI Financial Advisor** — chat with Google's Gemini (free tier) about your own summarized financial data (spending by category, budgets, goals) for personalized, grounded suggestions.
+- **Expense Prediction** — explainable next-month and category-level forecasts using the user's monthly expense history and linear regression when enough history exists.
+- **Expense Anomaly Detection** — robust per-category median/MAD checks that identify unusually high expenses without mixing accounts.
+- **AI Expense Categorization** — fast local merchant/description keyword suggestions that never remove the existing manual category choice or require an API call.
+- **Financial Health Score** — deterministic 0–100 score based on savings rate, expense ratio, budget adherence, goal progress, and month consistency.
+- **What-If Simulator** — interactive surplus and savings-goal projections for extra monthly saving or reducing a selected expense category.
+
+## Multi-user accounts
+
+The app now supports independent accounts with Register, Log In, and Log out controls. Each account receives a unique user ID, and transactions, budgets, savings goals, dashboard calculations, analytics, and AI Advisor summaries are filtered to that authenticated user. Ownership checks are also applied to every update and delete operation.
+
+Users must choose a username and a password of at least eight characters. Newly registered accounts always start with empty financial data. If an existing single-user `finance_tracker.db` is present, the first startup migrates its old rows under an inaccessible legacy owner instead of exposing them to a new account.
+
+### Gmail password recovery setup
+
+Registration requires an email address so that the Forgot Password flow can deliver a one-time verification code. Password recovery uses Gmail SMTP with a Gmail **App Password**, not a normal Gmail password. Add these values to Streamlit Secrets in `.streamlit/secrets.toml` or provide them as environment variables:
+
+```toml
+SMTP_HOST = "smtp.gmail.com"
+SMTP_PORT = "587"
+SMTP_USERNAME = "your-gmail-address@gmail.com"
+SMTP_APP_PASSWORD = "your-16-character-gmail-app-password"
+SMTP_FROM_EMAIL = "your-gmail-address@gmail.com"
+```
+
+`SMTP_HOST` and `SMTP_PORT` default to Gmail's `smtp.gmail.com` and `587`; `SMTP_USERNAME`, `SMTP_APP_PASSWORD`, and optionally `SMTP_FROM_EMAIL` are the important account settings. Enable two-step verification on the Gmail account before creating the App Password. Never commit `.streamlit/secrets.toml` or expose these values in the UI.
 
 ## Project structure
 
@@ -18,6 +43,7 @@ personal-financial-tracker/
 ├── app.py                          # Home page: quick add + at-a-glance summary
 ├── database.py                     # SQLite setup and CRUD for transactions, budgets, goals
 ├── utils.py                        # Shared CSS, category lists, formatting helpers, color palette
+├── finance_ml.py                   # User-scoped prediction, anomaly, categorization, scoring, and simulation logic
 ├── .streamlit/
 │   └── secrets.toml                # Local-only file holding GEMINI_API_KEY (not committed)
 ├── pages/
@@ -40,6 +66,7 @@ Streamlit automatically builds the sidebar navigation from the `pages/` folder �
 - pandas
 - plotly
 - google-genai (only needed for the AI Financial Advisor page)
+- scikit-learn (used by the expense prediction model)
 
 ## Setup
 
@@ -74,7 +101,7 @@ A file named `finance_tracker.db` will be created automatically the first time y
 ## Notes
 
 - All amounts are in ₹ (Indian Rupees). To use a different currency, update `format_currency()` in `utils.py`.
-- Data is stored locally in SQLite — there's no cloud sync or multi-user support.
+- Data is stored locally in SQLite. Authentication state is held in each browser's Streamlit session; use a shared, persistent database location when deploying the app for multiple users.
 - The AI Financial Advisor sends a **summary** (totals by category, budgets, goals), not your raw transaction list, to the Gemini API. Google's free tier may use prompts to improve their models — see [Gemini API terms](https://ai.google.dev/gemini-api/terms) for details.
 - `utils.py` defines two color-related values: `FINANCE_COLORS` (a dict of semantic colors, e.g. `FINANCE_COLORS["income"]`) and `FINANCE_COLOR_SEQUENCE` (the same colors as a flat list). Plotly's `color_discrete_sequence` argument requires a list, so chart code should use `FINANCE_COLOR_SEQUENCE`, not `FINANCE_COLORS`, when setting chart palettes.
 
@@ -89,4 +116,3 @@ A file named `finance_tracker.db` will be created automatically the first time y
 - Custom, user-defined categories
 - Multi-currency support
 - Bank statement import (CSV/PDF parsing)
-- Multi-user login support

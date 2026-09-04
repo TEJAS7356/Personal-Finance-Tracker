@@ -2,17 +2,19 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
+from auth import require_login
 from database import create_database, get_transactions
-from utils import inject_css, page_header, section_divider, format_currency
-
-create_database()
+from utils import inject_css, page_header, section_divider, format_currency, theme_chart_colors
 
 st.set_page_config(page_title="Monthly Analytics", page_icon="📈", layout="wide")
 inject_css()
 
+create_database()
+user_id, username = require_login()
+
 page_header("Monthly Analytics", "See how your income and spending trend month to month.")
 
-transactions = get_transactions()
+transactions = get_transactions(user_id)
 
 if not transactions:
     st.info("No transactions yet. Add some on the Transaction Management page first.")
@@ -20,6 +22,7 @@ if not transactions:
 
 df = pd.DataFrame(transactions, columns=["ID", "Date", "Type", "Category", "Amount", "Description"])
 df["Date"] = pd.to_datetime(df["Date"])
+chart_colors = theme_chart_colors()
 df["Month"] = df["Date"].dt.to_period("M").astype(str)
 
 monthly = (
@@ -44,10 +47,10 @@ fig.add_trace(go.Scatter(x=monthly["Month"], y=monthly["Expense"], name="Expense
 
 fig.update_layout(
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-    font=dict(color="#E5E7EB", family="Arial"),
-    xaxis=dict(title="Month", showgrid=False),
-    yaxis=dict(title="Amount (₹)", gridcolor="#2D2D33"),
-    legend=dict(font=dict(color="#D1D5DB")),
+    font=dict(color=chart_colors["font"], family="Arial"),
+    xaxis=dict(title="Month", showgrid=False, color=chart_colors["axis"]),
+    yaxis=dict(title="Amount (₹)", gridcolor=chart_colors["grid"], color=chart_colors["axis"]),
+    legend=dict(font=dict(color=chart_colors["legend"])),
     margin=dict(l=20, r=20, t=30, b=20)
 )
 

@@ -2,15 +2,20 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 
+from auth import require_login
 from database import (
     create_database, get_transactions, set_budget, get_budgets, delete_budget
 )
 from utils import inject_css, page_header, section_divider, format_currency, EXPENSE_CATEGORIES
-
-create_database()
+from finance_tools import budget_alerts, build_report_pdf
+from finance_ml import financial_health_score, predict_next_month_expenses
+from database import get_savings_goals, get_user_profile
 
 st.set_page_config(page_title="Budget Tracking", page_icon="🎯", layout="wide")
 inject_css()
+
+create_database()
+user_id, username = require_login()
 
 page_header("Budget Tracking", "Set a monthly spending limit per category and track progress.")
 
@@ -46,7 +51,7 @@ with st.form("set_budget_form", clear_on_submit=True):
         if budget_limit <= 0:
             st.error("Please enter a limit greater than ₹0.")
         else:
-            set_budget(budget_category, budget_limit)
+            set_budget(user_id, budget_category, budget_limit)
             st.session_state.budget_saved = True
             st.rerun()
 
@@ -61,8 +66,22 @@ today = date.today()
 month_label = today.strftime("%B %Y")
 st.header(f"This Month's Progress — {month_label}")
 
-budgets = get_budgets()
-transactions = get_transactions()
+budgets = get_budgets(user_id)
+transactions = get_transactions(user_id)
+goals = get_savings_goals(user_id)
+alerts = budget_alerts(budgets, transactions)
+
+if alerts:
+    st.warning("Monthly budget alerts")
+    for alert in alerts:
+        label = "over budget" if alert["level"] == "over" else "at least 75% used"
+        st.write(f"**{alert['category']}** is {label}: {format_currency(alert['spent'])} of {format_currency(alert['limit'])} ({alert['percent']*100:.0f}%).")
+
+profile = get_user_profile(user_id)
+health = financial_health_score(transactions, budgets, goals)
+prediction = predict_next_month_expenses(transactions)
+report = build_report_pdf(profile["username"], transactions, budgets, goals, health, prediction, alerts)
+st.download_button("Download monthly PDF report", report, f"finance_report_{today.isoformat()}.pdf", "application/pdf")
 
 if not budgets:
     st.info("No budgets set yet. Add one above to start tracking.")
@@ -109,6 +128,6 @@ else:
         with col_b:
             st.write("")
             if st.button("Remove", key=f"remove_budget_{category}"):
-                delete_budget(category)
+                delete_budget(user_id, category)
                 st.session_state.budget_deleted = True
                 st.rerun()

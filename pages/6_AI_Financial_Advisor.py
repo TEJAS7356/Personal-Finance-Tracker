@@ -2,13 +2,15 @@ import streamlit as st
 import pandas as pd
 import os
 
+from auth import require_login
 from database import create_database, get_transactions, get_budgets, get_savings_goals
 from utils import inject_css, page_header, section_divider
 
-create_database()
-
 st.set_page_config(page_title="AI Financial Advisor", page_icon="🤖", layout="wide")
 inject_css()
+
+create_database()
+user_id, username = require_login()
 
 page_header("AI Financial Advisor", "Ask questions about your finances and get personalized suggestions.")
 
@@ -54,7 +56,7 @@ except ImportError:
 # BUILD A SUMMARY OF THE USER'S DATA
 # ==================================================
 
-transactions = get_transactions()
+transactions = get_transactions(user_id)
 
 if not transactions:
     st.info("Add some transactions first so the advisor has data to work with.")
@@ -71,8 +73,8 @@ expense_by_category = (
     df[df["Type"] == "Expense"].groupby("Category")["Amount"].sum().sort_values(ascending=False)
 )
 
-budgets = get_budgets()
-goals = get_savings_goals()
+budgets = get_budgets(user_id)
+goals = get_savings_goals(user_id)
 
 summary_lines = [
     f"Total income: Rs. {total_income:,.2f}",
@@ -107,10 +109,10 @@ with st.expander("Data being sent to the advisor"):
 section_divider()
 st.header("Ask the Advisor")
 
-if "advisor_messages" not in st.session_state:
-    st.session_state.advisor_messages = []
+if f"advisor_messages_{user_id}" not in st.session_state:
+    st.session_state[f"advisor_messages_{user_id}"] = []
 
-for msg in st.session_state.advisor_messages:
+for msg in st.session_state[f"advisor_messages_{user_id}"]:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
@@ -130,7 +132,7 @@ prompt = clicked_suggestion or user_input
 
 if prompt:
 
-    st.session_state.advisor_messages.append({"role": "user", "content": prompt})
+    st.session_state[f"advisor_messages_{user_id}"].append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
@@ -164,9 +166,9 @@ if prompt:
 
         placeholder.markdown(reply_text)
 
-    st.session_state.advisor_messages.append({"role": "assistant", "content": reply_text})
+    st.session_state[f"advisor_messages_{user_id}"].append({"role": "assistant", "content": reply_text})
 
-if st.session_state.advisor_messages:
+if st.session_state[f"advisor_messages_{user_id}"]:
     if st.button("Clear conversation"):
-        st.session_state.advisor_messages = []
+        st.session_state[f"advisor_messages_{user_id}"] = []
         st.rerun()

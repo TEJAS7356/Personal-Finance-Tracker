@@ -1,16 +1,18 @@
 import streamlit as st
 from datetime import date
 
+from auth import require_login
 from database import (
     create_database, add_savings_goal, get_savings_goals,
     update_savings_goal_amount, delete_savings_goal
 )
 from utils import inject_css, page_header, section_divider, format_currency
 
-create_database()
-
 st.set_page_config(page_title="Savings Goals", page_icon="🏦", layout="wide")
 inject_css()
+
+create_database()
+user_id, username = require_login()
 
 page_header("Savings Goals", "Set a target and track your progress toward it.")
 
@@ -68,7 +70,7 @@ with st.form("add_goal_form", clear_on_submit=True):
 section_divider()
 st.header("Your Goals")
 
-goals = get_savings_goals()
+goals = get_savings_goals(user_id)
 
 if not goals:
     st.info("No savings goals yet. Create one above.")
@@ -105,7 +107,7 @@ else:
             st.write("")
             st.write("")
             if st.button("Update", key=f"update_goal_{goal_id}"):
-                update_savings_goal_amount(goal_id, new_amount)
+                update_savings_goal_amount(user_id, goal_id, new_amount)
                 st.session_state.goal_updated = True
                 st.rerun()
 
@@ -113,7 +115,7 @@ else:
             st.write("")
             st.write("")
             if st.button("Delete Goal", key=f"delete_goal_{goal_id}"):
-                delete_savings_goal(goal_id)
+                delete_savings_goal(user_id, goal_id)
                 st.session_state.goal_deleted = True
                 st.rerun()
 

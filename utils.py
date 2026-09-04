@@ -77,6 +77,27 @@ def _current_theme() -> str:
     return st.session_state.get("pft_theme", "dark")
 
 
+def theme_chart_colors() -> dict:
+    """Return readable Plotly colors for the active session theme."""
+    if _current_theme() == "light":
+        return {
+            "font": "#1a1d24",
+            "title": "#1a1d24",
+            "axis": "#5b606c",
+            "grid": "#dfe2e8",
+            "legend": "#343944",
+            "marker_line": "#f5f6fa",
+        }
+    return {
+        "font": "#E5E7EB",
+        "title": "#FFFFFF",
+        "axis": "#9aa0ac",
+        "grid": "#2D2D33",
+        "legend": "#D1D5DB",
+        "marker_line": "#18181B",
+    }
+
+
 def theme_toggle():
     """
     Renders a small toggle button. Place this once in your sidebar,
@@ -121,6 +142,9 @@ def inject_css():
             --pft-scrollbar: rgba(15, 20, 30, 0.18);
             --pft-btn-bg: rgba(15, 20, 30, 0.04);
             --pft-btn-border: rgba(15, 20, 30, 0.12);
+            --pft-input-solid: #ffffff;
+            --pft-input-text: #1a1d24;
+            --pft-menu-bg: #ffffff;
         """
     else:
         vars_css = """
@@ -143,6 +167,9 @@ def inject_css():
             --pft-scrollbar: rgba(255, 255, 255, 0.15);
             --pft-btn-bg: rgba(255, 255, 255, 0.05);
             --pft-btn-border: rgba(255, 255, 255, 0.1);
+            --pft-input-solid: #1c1f29;
+            --pft-input-text: #f4f5f7;
+            --pft-menu-bg: #161922;
         """
 
     st.markdown(
@@ -180,6 +207,92 @@ def inject_css():
         p, span, label, li, .stMarkdown {{
             color: var(--pft-text-primary);
         }}
+        .stCaption, [data-testid="stCaptionContainer"] {{
+            color: var(--pft-text-secondary) !important;
+        }}
+
+        /* ---------- Native Streamlit surfaces ---------- */
+        [data-testid="stForm"], [data-testid="stExpander"],
+        [data-testid="stAlert"], [data-testid="stMetric"] {{
+            color: var(--pft-text-primary);
+        }}
+        [data-testid="stMetricLabel"], [data-testid="stMetricValue"],
+        [data-testid="stMetricDelta"] {{
+            color: var(--pft-text-primary) !important;
+        }}
+        [data-baseweb="select"] > div,
+        [data-baseweb="input"], [data-baseweb="textarea"],
+        [data-testid="stDateInput"] input {{
+            background: var(--pft-input-bg) !important;
+            color: var(--pft-text-primary) !important;
+            border-color: var(--pft-input-border) !important;
+        }}
+        /* BaseWeb nests the editable element inside its wrapper. Target the
+           actual input/textarea as well so Streamlit's dark default theme
+           cannot make light-mode values disappear. */
+        .stTextInput input, .stNumberInput input, .stDateInput input,
+        [data-baseweb="input"] input, [data-baseweb="textarea"] textarea,
+        [data-baseweb="select"] input {{
+            background-color: var(--pft-input-solid) !important;
+            color: var(--pft-input-text) !important;
+            -webkit-text-fill-color: var(--pft-input-text) !important;
+            caret-color: var(--pft-input-text) !important;
+            color-scheme: {_current_theme()};
+        }}
+        /* BaseWeb paints the rounded field on one or more parent wrappers.
+           Style those wrappers too; otherwise dark Streamlit defaults can
+           remain visible around otherwise-correct light input text. */
+        [data-testid="stTextInput"] [data-baseweb="input"],
+        [data-testid="stNumberInput"] [data-baseweb="input"],
+        [data-testid="stDateInput"] [data-baseweb="input"],
+        [data-testid="stTextInput"] [data-baseweb="base-input"],
+        [data-testid="stNumberInput"] [data-baseweb="base-input"],
+        [data-testid="stDateInput"] [data-baseweb="base-input"],
+        [data-testid="stTextInput"] [data-baseweb="input"] > div,
+        [data-testid="stNumberInput"] [data-baseweb="input"] > div,
+        [data-testid="stDateInput"] [data-baseweb="input"] > div,
+        [data-testid="stSelectbox"] [data-baseweb="select"] > div {{
+            background: var(--pft-input-solid) !important;
+            background-color: var(--pft-input-solid) !important;
+            border-color: var(--pft-input-border) !important;
+            color: var(--pft-input-text) !important;
+        }}
+        /* Fallback for Streamlit version-specific class names. */
+        input, textarea, select,
+        [role="combobox"], [role="spinbutton"] {{
+            background: var(--pft-input-solid) !important;
+            background-color: var(--pft-input-solid) !important;
+            color: var(--pft-input-text) !important;
+            -webkit-text-fill-color: var(--pft-input-text) !important;
+            border-color: var(--pft-input-border) !important;
+        }}
+        input::placeholder, textarea::placeholder {{
+            color: var(--pft-text-secondary) !important;
+            -webkit-text-fill-color: var(--pft-text-secondary) !important;
+        }}
+        [data-testid="stTextInput"] [data-baseweb="input"] svg,
+        [data-testid="stNumberInput"] [data-baseweb="input"] svg,
+        [data-testid="stDateInput"] [data-baseweb="input"] svg {{
+            color: var(--pft-text-secondary) !important;
+            fill: var(--pft-text-secondary) !important;
+        }}
+        .stTextInput input::placeholder, .stNumberInput input::placeholder,
+        .stDateInput input::placeholder, [data-baseweb="textarea"] textarea::placeholder {{
+            color: var(--pft-text-secondary) !important;
+            -webkit-text-fill-color: var(--pft-text-secondary) !important;
+            opacity: 1 !important;
+        }}
+        [data-baseweb="select"] > div {{
+            background-color: var(--pft-input-solid) !important;
+            color: var(--pft-input-text) !important;
+        }}
+        [data-baseweb="popover"] > div, [role="listbox"] {{
+            background: var(--pft-menu-bg) !important;
+            color: var(--pft-text-primary) !important;
+        }}
+        [role="option"] {{ color: var(--pft-text-primary) !important; }}
+        [data-testid="stTabs"] button {{ color: var(--pft-text-secondary) !important; }}
+        [data-testid="stTabs"] button[aria-selected="true"] {{ color: #7c5cff !important; }}
 
         /* ---------- Headings ---------- */
         h1, h2, h3 {{
@@ -329,6 +442,7 @@ def inject_css():
             overflow: hidden;
             border: 1px solid var(--pft-glass-border);
         }}
+        [data-testid="stDataFrame"] iframe {{ color-scheme: {_current_theme()}; }}
 
         /* ---------- Expander ---------- */
         .streamlit-expanderHeader {{

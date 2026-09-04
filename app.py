@@ -2,16 +2,18 @@ import streamlit as st
 from datetime import date
 import pandas as pd
 
+from auth import require_login
 from database import create_database, add_transaction, get_transactions
 from utils import (
     inject_css, page_header, section_divider, format_currency,
     INCOME_CATEGORIES, EXPENSE_CATEGORIES
 )
 
-create_database()
-
 st.set_page_config(page_title="Personal Finance Tracker", page_icon="💰", layout="wide")
 inject_css()
+
+create_database()
+user_id, username = require_login()
 
 page_header(
     "Personal Finance Tracker",
@@ -63,7 +65,7 @@ with st.form("quick_add_form", clear_on_submit=True):
         if amount <= 0:
             st.error("Please enter an amount greater than ₹0.")
         else:
-            add_transaction(str(transaction_date), transaction_type, category, amount, description)
+            add_transaction(user_id, str(transaction_date), transaction_type, category, amount, description)
             st.session_state.show_success = True
             st.rerun()
 
@@ -72,7 +74,7 @@ with st.form("quick_add_form", clear_on_submit=True):
 # AT-A-GLANCE SUMMARY
 # ==================================================
 
-transactions = get_transactions()
+transactions = get_transactions(user_id)
 
 if transactions:
 
